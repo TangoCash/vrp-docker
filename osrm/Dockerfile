@@ -6,7 +6,7 @@ ENV OSRM_ALGORITHM=mld \
     OSRM_PORT=5000 \
     OSRM_PROFILE=/opt/car.lua \
     OSRM_MAP_NAME=combine-latest \
-    OSRM_GEOFABRIK_PATH: europe/germany-latest.osm.pbf \
+    OSRM_GEOFABRIK_PATH=europe/germany-latest.osm.pbf \
     OSRM_NOTIFY_FILEPATH=/data/osrm_notify.txt \
     OSRM_MAX_MATCH=1000 \
     OSRM_MAX_TABLE=1000 \
