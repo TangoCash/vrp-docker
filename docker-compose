@@ -1,0 +1,74 @@
+version: "3"
+services:
+    osrm:
+        container_name: osrm
+        image: tangocash/osrm-backend:latest
+        restart: always
+        ports:
+            - "5000:5000"
+        environment:
+            # list of *.osm.pbf seperated by space, will be merged and used in OSRM and Nominatim
+            - OSRM_GEOFABRIK_PATH: europe/germany-latest.osm.pbf europe/france-latest.osm.pbf
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - /etc/timezone:/etc/timezone:ro
+            - ./vrpdata:/data
+        networks:
+            tsp_network:
+                aliases:
+                - osrm
+    nominatim:
+        container_name: nominatim
+        image: tangocash/nominatim:latest
+        restart: always
+        ports:
+            - "8080:8080"
+        depends_on:
+            - osrm
+        environment:
+            PBF_PATH: /nominatim/data/combine-latest.osm.pbf
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - /etc/timezone:/etc/timezone:ro
+            - ./vrpdata:/nominatim/data
+        networks:
+            tsp_network:
+                aliases:
+                - nominatim
+    vroom-backend:
+        container_name: vroom-backend
+        image: tangocash/vroom-backend:latest
+        restart: always
+        ports:
+            - "3000:3000"
+        depends_on:
+            - osrm
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - /etc/timezone:/etc/timezone:ro
+        networks:
+            tsp_network:
+                aliases:
+                - vroom-backend
+    vroom-frontend:
+        container_name: vroom-frontend
+        image: tangocash/vroom-frontend:latest
+        restart: always
+        ports:
+            - "9966:9966"
+
+        depends_on:
+            - osrm
+            - vroom-backend
+            - nominatim
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - /etc/timezone:/etc/timezone:ro
+        networks:
+            tsp_network:
+                aliases:
+                - vroom-frontend
+networks:
+  tsp_network:
+      driver: bridge
+

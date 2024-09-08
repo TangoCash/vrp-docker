@@ -1,0 +1,11 @@
+version: "3"
+services:
+    photon:
+        container_name: photon
+        image: tangocash/photon:latest
+        restart: always
+        ports:
+            - 2322:2322
+        environment:
+            # country code, e.g. de or fr or all for whole world
+            EXTRACT_COUNTRY: all
