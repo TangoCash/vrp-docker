@@ -1,79 +1,63 @@
-FROM debian:buster-slim as buildstage
+FROM debian:bookworm-slim as builder
 LABEL maintainer="TangoCash"
 
-# Install dependencies
-RUN apt-get update && \
-    apt-get install -y git pkg-config && \
-    apt-get -y --no-install-recommends install cmake make git gcc g++ libbz2-dev libstxxl-dev libstxxl1v5 libxml2-dev \
-        libzip-dev libboost-all-dev lua5.2 liblua5.2-dev libtbb-dev -o APT::Install-Suggests=0 -o APT::Install-Recommends=0
+WORKDIR /
 
-# Build osrm-backend
-RUN git clone --depth 1 https://github.com/Project-OSRM/osrm-backend.git && \
-    cd osrm-backend && \
-    echo "Building OSRM ${DOCKER_TAG}" && \
-    git show --format="%H" | head -n1 > /opt/OSRM_GITSHA && \
-    echo "Building OSRM gitsha $(cat /opt/OSRM_GITSHA)" && \
-    mkdir -p build && \
-    cd build && \
-    BUILD_TYPE="Release" && \
-    ENABLE_ASSERTIONS="Off" && \
-    BUILD_TOOLS="Off" && \
-    case ${DOCKER_TAG} in *"-debug"*) BUILD_TYPE="Debug";; esac && \
-    case ${DOCKER_TAG} in *"-assertions"*) BUILD_TYPE="RelWithDebInfo" && ENABLE_ASSERTIONS="On" && BUILD_TOOLS="On";; esac && \
-    echo "Building ${BUILD_TYPE} with ENABLE_ASSERTIONS=${ENABLE_ASSERTIONS} BUILD_TOOLS=${BUILD_TOOLS}" && \
-    cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DENABLE_ASSERTIONS=${ENABLE_ASSERTIONS} -DBUILD_TOOLS=${BUILD_TOOLS} -DENABLE_LTO=On && \
-    make install && \
-    cd ../profiles && \
-    cp -r * /opt && \
-    ldconfig
+RUN echo "Updating apt-get and installing dependencies..." && \
+  apt-get -y update > /dev/null && apt-get -y install > /dev/null \
+  git-core \
+  build-essential \
+	g++ \
+  libssl-dev \
+	libasio-dev \
+  libglpk-dev \
+	pkg-config
 
-# Build vroom-backend
-RUN git clone --depth 1 https://github.com/VROOM-Project/vroom.git && \
-    mkdir vroom/bin && \
-    cd vroom/src && \
-    make && \
-    rm -rf /usr/local/lib/libosrm* && \
-    cp ../bin/* /usr/local/bin && \
-    strip /usr/local/bin/*
+ARG VROOM_EXPRESS_RELEASE=v0.12.0
 
-FROM debian:buster-slim as runstage
+# clone here, since the runner image doesn't have git installed
+RUN echo "Cloning and installing vroom-express release/branch ${VROOM_EXPRESS_RELEASE}..." && \
+    git clone --branch $VROOM_EXPRESS_RELEASE --single-branch https://github.com/VROOM-Project/vroom-express.git
 
-# Copy built osrm and vroom binaries from `buildstage`
-COPY --from=buildstage /usr/local /usr/local
-COPY --from=buildstage /opt /opt
+ARG VROOM_RELEASE=v1.14.0
 
-# Install dependencies
-RUN mkdir -p /src && \
-    mkdir -p /opt && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-        libboost-chrono1.67.0 libboost-date-time1.67.0 libboost-filesystem1.67.0 libboost-iostreams1.67.0 \
-        libboost-program-options1.67.0 libboost-regex1.67.0 libboost-thread1.67.0 liblua5.2-0 libtbb2 \
-        curl \
-        software-properties-common \
-        git && \
-    curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
-    apt-get update && apt-get install -y nodejs
+RUN echo "Cloning and installing vroom release/branch ${VROOM_RELEASE}..." && \
+    git clone --branch $VROOM_RELEASE  --single-branch --recurse-submodules https://github.com/VROOM-Project/vroom.git && \
+    cd vroom && \
+    make -C /vroom/src -j$(nproc)
 
-# Build vroom-express
-RUN git clone --depth 1 https://github.com/VROOM-Project/vroom-express.git && \
-    useradd -m -s /bin/bash vroom && \
-    mkfifo -m 600 /vroom-express/logpipe && \
-    chown vroom /vroom-express/logpipe && \
-    ln -sf /vroom-express/logpipe /vroom-express/access.log && \
-    ln -sf /vroom-express/logpipe /vroom-express/error.log && \
-    cd /vroom-express && \
-    npm install && \
-    apt purge -y git curl && \
-    apt autoremove --purge -y && \
-    apt clean && \
-    rm -rf /var/lib/apt/lists/*
 
-# Copy config file
-COPY config.js /vroom-express/src/config.js
+FROM node:20-bookworm-slim as runstage
+
+COPY --from=builder /vroom-express/. /vroom-express
+COPY --from=builder /vroom/bin/vroom /usr/local/bin
 
 WORKDIR /vroom-express
 
-EXPOSE 3000
+RUN apt-get update > /dev/null && \
+    apt-get install -y --no-install-recommends \
+      libssl3 \
+      curl \
+      libglpk40 \
+      > /dev/null && \
+    rm -rf /var/lib/apt/lists/* && \
+    # Install vroom-express
+    npm config set loglevel error && \
+    npm install && \
+    # To share the config.yml & access.log file with the host
+    mkdir /conf
 
-CMD ["npm", "start"]
+
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod 777 /entrypoint.sh
+COPY ./config.yml /vroom-express/config.yml
+
+ENV VROOM_ROUTER=osrm \
+    VROOM_DOCKER=osrm \
+    VROOM_LOG=/conf
+
+HEALTHCHECK --start-period=10s CMD curl --fail -s http://localhost:3000/health || exit 1
+
+EXPOSE 3000
+ENTRYPOINT ["/bin/bash"]
+CMD ["/entrypoint.sh"]

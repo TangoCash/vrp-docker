@@ -15,6 +15,7 @@ RUN apt-get update && \
     apt-get autoclean
 
 COPY api.js /vroom-frontend/src/config/api.js
+COPY geocoder.js /vroom-frontend/src/utils/geocoder.js
 
 WORKDIR /vroom-frontend
 
