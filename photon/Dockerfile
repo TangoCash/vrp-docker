@@ -16,6 +16,7 @@ RUN useradd --uid 5001 --create-home photon;
 
 USER photon:photon
 WORKDIR /home/photon
+RUN mkdir photon_data
 
 ADD --chown=photon:photon https://github.com/komoot/photon/releases/download/0.5.0/photon-0.5.0.jar /home/photon/photon.jar
 
