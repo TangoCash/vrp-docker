@@ -10,7 +10,7 @@ services:
             # country code, e.g. de or fr or all for whole world
             EXTRACT_COUNTRY: all
         volumes:
-            - photon-data:/photon/photon_data
+            - photon-data:/home/photon/photon_data
         healthcheck:
             test: "bash -c 'printf \"GET / HTTP/1.1\n\n\" > /dev/tcp/127.0.0.1/2322; exit $?;'"
             interval: 30s
