@@ -2,6 +2,7 @@ FROM mediagis/nominatim:4.4
 LABEL maintainer="TangoCash"
 
 ENV PBF_PATH=/nominatim/data/combine-latest.osm.pbf
+ENV NOMINATIM_PASSWORD=qaIACxO6wMR3
 
 RUN useradd --uid 5001 nominatim;
 

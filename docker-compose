@@ -12,7 +12,13 @@ services:
         volumes:
             - /etc/localtime:/etc/localtime:ro
             - /etc/timezone:/etc/timezone:ro
-            - ./vrpdata:/data
+            - vrp-data:/data
+        healthcheck:
+            test: "bash -c 'printf \"GET / HTTP/1.1\n\n\" > /dev/tcp/127.0.0.1/5000; exit $?;'"
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 120s
     nominatim:
         container_name: nominatim
         image: tangocash/nominatim:latest
@@ -20,13 +26,20 @@ services:
         ports:
             - "8080:8080"
         depends_on:
-            - osrm
+            osrm:
+                condition: service_healthy
         environment:
             PBF_PATH: /nominatim/data/combine-latest.osm.pbf
+            NOMINATIM_PASSWORD: qaIACxO6wMR3
         volumes:
             - /etc/localtime:/etc/localtime:ro
             - /etc/timezone:/etc/timezone:ro
-            - ./vrpdata:/nominatim/data
+            - vrp-data:/nominatim/data
+            - vrp-db:/var/lib/postgresql/14/main
+        healthcheck:
+            test: "bash -c 'printf \"GET / HTTP/1.1\n\n\" > /dev/tcp/127.0.0.1/8080; exit $?;'"
+            interval: 30s
+            timeout: 10s
     vroom-backend:
         container_name: vroom-backend
         image: tangocash/vroom-backend:latest
@@ -34,7 +47,8 @@ services:
         ports:
             - "3000:3000"
         depends_on:
-            - osrm
+            osrm:
+                condition: service_healthy
         volumes:
             - /etc/localtime:/etc/localtime:ro
             - /etc/timezone:/etc/timezone:ro
@@ -45,9 +59,19 @@ services:
         ports:
             - "9966:9966"
         depends_on:
-            - osrm
-            - vroom-backend
-            - nominatim
+            vroom-backend:
+                condition: service_healthy
+            nominatim:
+                condition: service_healthy
         volumes:
             - /etc/localtime:/etc/localtime:ro
             - /etc/timezone:/etc/timezone:ro
+        healthcheck:
+            test: "bash -c 'printf \"GET / HTTP/1.1\n\n\" > /dev/tcp/127.0.0.1/9966; exit $?;'"
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
+volumes:
+    vrp-data:
+    vrp-db:
