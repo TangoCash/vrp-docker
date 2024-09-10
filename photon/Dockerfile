@@ -2,6 +2,8 @@ FROM openjdk:11-jre
 LABEL maintainer="TangoCash"
 
 ENV EXTRACT_COUNTRY=all
+ENV NOMINATIM_PASSWORD=qaIACxO6wMR3
+ENV NOMINATIM_HOST=nominatim
 
 # Install pbzip2 for parallel extraction
 RUN apt-get update \
