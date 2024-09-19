@@ -3,8 +3,8 @@ LABEL maintainer="TangoCash"
 
 ENV OSRM_ALGORITHM=mld \
     OSRM_THREADS=2 \
-    OSRM_PORT=5000 \
-    OSRM_PROFILE=caddy \
+    OSRM_PORT=5002 \
+    OSRM_PROFILE=lkw \
     OSRM_MAP_NAME=combine-latest \
     OSRM_GEOFABRIK_PATH=europe/germany-latest.osm.pbf \
     OSRM_NOTIFY_FILEPATH=/data/osrm_notify.txt \
@@ -26,13 +26,13 @@ RUN set -ex; \
     mkdir -p /data; \
     chown -R osrm:osrm /data
 
+COPY ./way_handlers.lua /usr/local/share/osrm/profiles/lib/way_handlers.lua
+COPY ./lkw.lua /opt/lkw.lua
+
 USER osrm:osrm
 WORKDIR /home/osrm
 
 VOLUME [ "/data" ]
-
-COPY ./caddy.lua /opt/caddy.lua
-COPY ./sprinter.lua /opt/sprinter.lua
 
 COPY --chown=osrm:osrm ./entrypoint.sh /home/osrm
 RUN chmod 777 /home/osrm/entrypoint.sh

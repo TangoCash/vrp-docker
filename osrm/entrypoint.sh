@@ -111,14 +111,21 @@ download_map() {
     do
         mapname=$(basename ${map})
         maps="${maps} ${mapname}"
-        log "Downloading OSR map '${map}' from Geofabrik..."
-        curl -q -L \
-            -o "/data/${mapname}" \
-            "http://download.geofabrik.de/${map}"
+        if [ ! -f "/data/${mapname}" ]; then
+            log "Downloading OSR map '${map}' from Geofabrik..."
+            curl -q -L \
+                -o "/data/${mapname}" \
+                "http://download.geofabrik.de/${map}"
+        fi
     done
     log "Download OSR map '${maps}' from Geofabrik finished."    
 
-    (cd /data; osmium merge --overwrite ${maps} -o ${OSRM_MAP_NAME}.osm.pbf)
+    if [ ! -f "${OSRM_MAP_NAME}.osm.pbf" ]; then
+        (cd /data; osmium merge --overwrite ${maps} -o ${OSRM_MAP_NAME}.osm.pbf)
+        log "Merged OSR maps '${maps}' to '${OSRM_MAP_NAME}.osm.pbf'"
+    fi
+
+    (cd /data; ln -s ${OSRM_MAP_NAME}.osm.pbf ${OSRM_MAP_NAME}-${OSRM_PROFILE}.osm.pbf)
     log "Merged OSR maps '${maps}' to '${OSRM_MAP_NAME}.osm.pbf'"
 }
 
@@ -129,11 +136,11 @@ extract_map() {
         exit 1
     fi
 
-    log "Extracting OSRM info from map '${OSRM_MAP_NAME}' with profile '${OSRM_PROFILE}'..."
+    log "Extracting OSRM info from map '${OSRM_MAP_NAME}-${OSRM_PROFILE}' with profile '${OSRM_PROFILE}'..."
     osrm-extract \
-        -p "${OSRM_PROFILE}" \
-        "/data/${OSRM_MAP_NAME}.osm.pbf"
-    log "Extraction OSRM info from map '${OSRM_MAP_NAME}' with profile '${OSRM_PROFILE}' finished."
+        -p "/opt/${OSRM_PROFILE}.lua" \
+        "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.osm.pbf"
+    log "Extraction OSRM info from map '${OSRM_MAP_NAME}-${OSRM_PROFILE}' with profile '${OSRM_PROFILE}' finished."
 
     #Keep file for nominatim
     #log "Deleting OSM map '${OSRM_MAP_NAME}'..."
@@ -145,14 +152,14 @@ preprocess_map() {
     if [ "${OSRM_ALGORITHM}" == 'ch' ]; then
 
         log "Pre-processing OSRM for Contraction Hierarchies..."
-        osrm-contract "/data/${OSRM_MAP_NAME}.osrm"
+        osrm-contract "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.osrm"
         log "Pre-processing for Contraction Hierarchies finished."
 
     elif [ "${OSRM_ALGORITHM}" == 'mld' ]; then
 
         log "Pre-processing OSRM for Multi-Level Dijkstra..."
-        osrm-partition "/data/${OSRM_MAP_NAME}.osrm"
-        osrm-customize "/data/${OSRM_MAP_NAME}.osrm"
+        osrm-partition "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.osrm"
+        osrm-customize "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.osrm"
         log "Pre-processing for Multi-Level Dijkstra finished."
 
     else
@@ -179,7 +186,7 @@ routed() {
             --max-table-size "${OSRM_MAX_TABLE}" \
             --max-viaroute-size "${OSRM_MAX_VIAROUTE}" \
             --algorithm "${OSRM_ALGORITHM}" \
-            "/data/${OSRM_MAP_NAME}.osrm" > /data/osrm.logs 2>&1 &
+            "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.osrm" > /data/osrm.logs 2>&1 &
         echo $! > /data/osrm.pid
         log "OSRM routing server (${OSRM_ALGORITHM}) started in background (PID: $(cat /data/osrm.pid))."
     else
@@ -191,7 +198,7 @@ routed() {
             --max-table-size "${OSRM_MAX_TABLE}" \
             --max-viaroute-size "${OSRM_MAX_VIAROUTE}" \
             --algorithm "${OSRM_ALGORITHM}" \
-            "/data/${OSRM_MAP_NAME}.osrm"
+            "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.osrm"
     fi
 
 }
