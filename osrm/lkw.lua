@@ -15,7 +15,7 @@ Measure = require("lib/measure")
 function setup()
   return {
     properties = {
-      max_speed_for_map_matching      = 80/3.6, -- 180kmph -> m/s
+      max_speed_for_map_matching      = 80/3.6, -- 80kmph -> m/s
       -- For routing based on duration, but weighted for preferring certain roads
       weight_name                     = 'routability',
       -- For shortest duration without penalties for accessibility
@@ -431,7 +431,6 @@ function process_way(profile, way, result, relations)
     WayHandlers.handle_width,
     WayHandlers.handle_length,
     WayHandlers.handle_weight,
-    WayHandlers.handle_hgv_access,
 
     -- determine access status by checking our hierarchy of
     -- access tags, e.g: motorcar, motor_vehicle, vehicle

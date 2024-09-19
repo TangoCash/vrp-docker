@@ -125,7 +125,7 @@ download_map() {
         log "Merged OSR maps '${maps}' to '${OSRM_MAP_NAME}.osm.pbf'"
     fi
 
-    (cd /data; ln -s ${OSRM_MAP_NAME}.osm.pbf ${OSRM_MAP_NAME}-${OSRM_PROFILE}.osm.pbf)
+    (cd /data; ln -sf ${OSRM_MAP_NAME}.osm.pbf ${OSRM_MAP_NAME}-${OSRM_PROFILE}.osm.pbf)
     log "Merged OSR maps '${maps}' to '${OSRM_MAP_NAME}.osm.pbf'"
 }
 
@@ -141,6 +141,7 @@ extract_map() {
         -p "/opt/${OSRM_PROFILE}.lua" \
         "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.osm.pbf"
     log "Extraction OSRM info from map '${OSRM_MAP_NAME}-${OSRM_PROFILE}' with profile '${OSRM_PROFILE}' finished."
+    touch "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.extract"
 
     #Keep file for nominatim
     #log "Deleting OSM map '${OSRM_MAP_NAME}'..."
@@ -161,6 +162,7 @@ preprocess_map() {
         osrm-partition "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.osrm"
         osrm-customize "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.osrm"
         log "Pre-processing for Multi-Level Dijkstra finished."
+        touch "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.preprocess"
 
     else
 
@@ -224,9 +226,15 @@ Options:
 
 # Run OSRM Backend
 run_osrm() {
-    download_map
-    extract_map
-    preprocess_map
+    if [ ! -f "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.osm.pbf" ]; then
+        download_map
+    fi
+    if [ ! -f "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.extract" ]; then
+        extract_map
+    fi
+    if [ ! -f "/data/${OSRM_MAP_NAME}-${OSRM_PROFILE}.preprocess" ]; then
+        preprocess_map
+    fi
 
     routed
 }

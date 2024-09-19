@@ -26,13 +26,16 @@ RUN set -ex; \
     mkdir -p /data; \
     chown -R osrm:osrm /data
 
+
+COPY ./caddy.lua /opt/caddy.lua
+RUN chmod 644 /opt/caddy.lua
+COPY ./sprinter.lua /opt/sprinter.lua
+RUN chmod 644 /opt/sprinter.lua
+
 USER osrm:osrm
 WORKDIR /home/osrm
 
 VOLUME [ "/data" ]
-
-COPY ./caddy.lua /opt/caddy.lua
-COPY ./sprinter.lua /opt/sprinter.lua
 
 COPY --chown=osrm:osrm ./entrypoint.sh /home/osrm
 RUN chmod 777 /home/osrm/entrypoint.sh

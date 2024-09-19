@@ -27,7 +27,9 @@ RUN set -ex; \
     chown -R osrm:osrm /data
 
 COPY ./way_handlers.lua /usr/local/share/osrm/profiles/lib/way_handlers.lua
+RUN chmod 644 /usr/local/share/osrm/profiles/lib/way_handlers.lua
 COPY ./lkw.lua /opt/lkw.lua
+RUN chmod 644 /opt/lkw.lua
 
 USER osrm:osrm
 WORKDIR /home/osrm
