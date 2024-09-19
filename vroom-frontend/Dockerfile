@@ -16,6 +16,7 @@ RUN apt-get update && \
 
 COPY api.js /vroom-frontend/src/config/api.js
 COPY geocoder.js /vroom-frontend/src/utils/geocoder.js
+COPY solution_handler.js /vroom-frontend/src/utils/solution_handler.js
 
 WORKDIR /vroom-frontend
 
