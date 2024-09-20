@@ -125,7 +125,7 @@ services:
             NOMINATIM_PASSWORD: qaIACxO6wMR3
             NOMINATIM_HOST: nominatim
         volumes:
-            - vrp-photon:/photon/photon_data
+            - vrp-photon:/home/photon/photon_data
         healthcheck:
             test: "bash -c 'printf \"GET / HTTP/1.1\n\n\" > /dev/tcp/127.0.0.1/2322; exit $?;'"
             interval: 30s
